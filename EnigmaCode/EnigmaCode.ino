@@ -1,8 +1,6 @@
 //DANIEL SCOTT
 //ENIGMA MACHINE 2021
 
-//testing testing ---------------------------------------------------- DELETE LATER
-
 //INITIALISATIONS
 
 char alphabet[26] = "abcdefghijklmnopqrstuvwxyz";
