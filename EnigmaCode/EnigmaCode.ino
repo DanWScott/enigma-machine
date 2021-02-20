@@ -126,9 +126,17 @@ void walzenBackwards() {
 void backwardWalze(int walzeNumber) {
   int currentValue;
   char currentLetter;
-  if (walzeNumber == 0) currentLetter = walze1Orientation[encryptedLetter];
-  else if (walzeNumber == 1) currentLetter = walze2Orientation[encryptedLetter];
-  else if (walzeNumber == 2) currentLetter = walze3Orientation[encryptedLetter];
+  switch (walzeNumber) {
+    case 0:
+      currentLetter = walze1Orientation[encryptedLetter];
+      break;
+    case 1:
+      currentLetter = walze2Orientation[encryptedLetter];
+      break;
+    case 2:
+      currentLetter = walze3Orientation[encryptedLetter];
+      break;
+  }
   for (int i = 0; i < 26; i++) {
     if (alphabet[i] == currentLetter) currentValue = i;
   }
