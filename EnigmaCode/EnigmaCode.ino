@@ -6,6 +6,7 @@
 char alphabet[26] = "abcdefghijklmnopqrstuvwxyz";
 
 //Substitution Arrays
+int steckerbrettArray[26];
 int umkehrwalzeArray[26] = {24, 17, 20, 7, 16, 18, 11, 3, 15, 23, 13, 6, 14, 10, 12, 8, 4, 1, 5, 25, 2, 22, 21, 9, 0, 19};
 int walzeIArray[26] = {4, 10, 12, 5, 11, 6, 3, 16, 22, 25, 13, 19, 14, 22, 24, 7, 23, 20, 18, 15, 0, 8, 1, 17, 2, 9};
 int walzeIIArray[26] = {0, 9, 3, 10, 18, 8, 17, 20, 23, 1, 11, 7, 22, 19, 12, 2, 16, 6, 25, 13, 15, 24, 5, 21, 14, 4};
@@ -29,7 +30,7 @@ int encryptedLetter;
 //METHODS
 
 void setup() {
-  
+  for (int i = 0; i < 26; i++) steckerbrettArray[i] = i;  
 }
 
 void loop() {
@@ -60,9 +61,15 @@ void rotateWalzen() {
 //ENCRYPTION STAGES
 
 void encrypt() {
+  steckerbrett();
   walzenForwards();
   umkehrwalze();
   walzenBackwards();
+  steckerbrett();
+}
+
+void steckerbrett() {
+  encryptedLetter = steckerbrettArray[encryptedLetter];
 }
 
 void walzenForwards() {
