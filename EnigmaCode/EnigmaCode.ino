@@ -3,7 +3,15 @@
 
 //INITIALISATIONS
 
-char alphabet[26] = "abcdefghijklmnopqrstuvwxyz";
+//Libraries
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+//LCD Setup
+LiquidCrystal_I2C walzenLCD(0x3E, 16, 2); //Establishes an LCD Screen/I2C module with the address 0x3E (A0 connected)
+
+//Constants
+const char alphabet[26] = "abcdefghijklmnopqrstuvwxyz";
 
 //Substitution Arrays
 int steckerbrettArray[26];
@@ -31,11 +39,13 @@ int encryptedLetter;
 
 void setup() {
   for (int i = 0; i < 26; i++) steckerbrettArray[i] = i;  
+  walzenScreenRefresh();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  delay(500);
+  rotateWalzen();
 }
 
 void rotateWalzen() {
@@ -55,6 +65,25 @@ void rotateWalzen() {
       }
     }
   }
+  walzenScreenRefresh();
+}
+
+void walzenScreenRefresh() {
+  char letter1 = toUpperCase(walze1Orientation[0]);
+  char letter2 = toUpperCase(walze2Orientation[0]);
+  char letter3 = toUpperCase(walze3Orientation[0]);
+  walzenLCD.init();
+  walzenLCD.backlight();
+  walzenLCD.setCursor(3,0);
+  walzenLCD.print("|1||2||3|");
+  walzenLCD.setCursor(3,1);
+  walzenLCD.print("|");
+  walzenLCD.print(letter1);
+  walzenLCD.print("||");
+  walzenLCD.print(letter2);
+  walzenLCD.print("||");
+  walzenLCD.print(letter3);
+  walzenLCD.print("|");
 }
 
 //----------------------------------------------------------
