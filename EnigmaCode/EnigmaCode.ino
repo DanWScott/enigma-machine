@@ -8,7 +8,8 @@
 #include <LiquidCrystal_I2C.h>
 
 //LCD Setup
-LiquidCrystal_I2C walzenLCD(0x3E, 16, 2); //Establishes an LCD Screen/I2C module with the address 0x3E (A0 connected)
+LiquidCrystal_I2C walzenLCD(0x3F, 16, 2); //Establishes an LCD Screen/I2C module with the address 0x3E (A0 connected)
+LiquidCrystal_I2C outputLCD(0x3E, 16, 2); //Establishes an LCD Screen/I2C module with the address 0x3F (No solder pad connections)
 
 //Constants
 const char alphabet[26] = "abcdefghijklmnopqrstuvwxyz";
@@ -31,7 +32,8 @@ char walze1Orientation[28] = "abcdefghijklmnopqrstuvwxyz..";
 char walze2Orientation[28] = "abcdefghijklmnopqrstuvwxyz..";
 char walze3Orientation[28] = "abcdefghijklmnopqrstuvwxyz..";
 
-
+//Variables
+char message[20];
 int encryptedLetter;
 
 //----------------------------------------------------------
@@ -40,12 +42,17 @@ int encryptedLetter;
 void setup() {
   for (int i = 0; i < 26; i++) steckerbrettArray[i] = i;  
   walzenScreenRefresh();
+  Serial.print("started");
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   delay(500);
   rotateWalzen();
+  encryptedLetter = random(26);
+  Serial.print("loop entered");
+  //outputScreen();
+  Serial.print("output done");
 }
 
 void rotateWalzen() {
@@ -86,6 +93,32 @@ void walzenScreenRefresh() {
   walzenLCD.print("|");
 }
 
+void outputScreen() {
+  int positionUnoccupied;
+  for (int i = 19; i >=0; i--) for (int i1 = 0; i < 26; i++) if (message[i] == alphabet[i1]) positionUnoccupied = i;
+  if (positionUnoccupied == 19) {
+    for (int i = 0; i < 10; i++) {
+      message[i] = message[i + 10];
+      message[i + 10] = " ";
+    }
+    positionUnoccupied -= 10;
+  }
+  message[positionUnoccupied] = alphabet[encryptedLetter];
+  Serial.print(message[positionUnoccupied]);
+  outputLCD.init();
+  outputLCD.backlight();
+  outputLCD.setCursor(2,0);
+  for (int i = 0; i < 10; i++) {
+    outputLCD.print(message[i]);
+    if (i == 4) outputLCD.print(" ");
+  }
+  outputLCD.setCursor(2,1);
+  for (int i = 10; i < 20; i++) {
+    outputLCD.print(message[i]);
+    if (i == 14) outputLCD.print(" ");
+  }
+}
+
 //----------------------------------------------------------
 //ENCRYPTION STAGES
 
@@ -95,6 +128,7 @@ void encrypt() {
   umkehrwalze();
   walzenBackwards();
   steckerbrett();
+  outputScreen();
 }
 
 void steckerbrett() {
