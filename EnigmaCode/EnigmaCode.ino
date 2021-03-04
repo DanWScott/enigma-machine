@@ -36,13 +36,14 @@ char walze3Orientation[28] = "abcdefghijklmnopqrstuvwxyz..";
 char message[20];
 int encryptedLetter;
 
+int positionUnoccupied = -1; 
+
 //----------------------------------------------------------
 //METHODS
 
 void setup() {
   for (int i = 0; i < 26; i++) steckerbrettArray[i] = i;  
   walzenScreenRefresh();
-  Serial.print("started");
 }
 
 void loop() {
@@ -50,9 +51,7 @@ void loop() {
   delay(500);
   rotateWalzen();
   encryptedLetter = random(26);
-  Serial.print("loop entered");
-  //outputScreen();
-  Serial.print("output done");
+  outputScreen();
 }
 
 void rotateWalzen() {
@@ -93,29 +92,37 @@ void walzenScreenRefresh() {
   walzenLCD.print("|");
 }
 
+
+//Changes the output shown on the output screen.
 void outputScreen() {
-  int positionUnoccupied;
-  for (int i = 19; i >=0; i--) for (int i1 = 0; i < 26; i++) if (message[i] == alphabet[i1]) positionUnoccupied = i;
-  if (positionUnoccupied == 19) {
+  positionUnoccupied++;
+  if (positionUnoccupied == 19) { //Rearranges the array if the screen is about to be full, such that the second line is moved to the top, and the top line is taken off screen.
     for (int i = 0; i < 10; i++) {
       message[i] = message[i + 10];
       message[i + 10] = " ";
     }
     positionUnoccupied -= 10;
   }
-  message[positionUnoccupied] = alphabet[encryptedLetter];
-  Serial.print(message[positionUnoccupied]);
-  outputLCD.init();
-  outputLCD.backlight();
-  outputLCD.setCursor(2,0);
-  for (int i = 0; i < 10; i++) {
-    outputLCD.print(message[i]);
-    if (i == 4) outputLCD.print(" ");
+  message[positionUnoccupied] = toUpperCase(alphabet[encryptedLetter]); //Puts the encrypted letter into the first free character in the array.*/
+  outputLCD.init(); //Initialises the LCD.
+  outputLCD.backlight(); //Turns on the LCD's backlight.
+  outputLCD.setCursor(2,0); //Starts printing in the third column of the first row.
+  if (positionUnoccupied > 9) {
+    for (int i = 0; i < 10; i++) {
+      outputLCD.print(message[i]);
+      if (i == 4) outputLCD.print(" ");
+    }
+    outputLCD.setCursor(2,1);
+    for (int i = 10; i < positionUnoccupied + 1; i++) {
+      outputLCD.print(message[i]);
+      if (i == 14) outputLCD.print(" ");
+    }
   }
-  outputLCD.setCursor(2,1);
-  for (int i = 10; i < 20; i++) {
-    outputLCD.print(message[i]);
-    if (i == 14) outputLCD.print(" ");
+  else {
+    for (int i = 0; i < positionUnoccupied + 1; i++) {
+      outputLCD.print(message[i]);
+      if (i == 4) outputLCD.print(" ");
+    }
   }
 }
 
