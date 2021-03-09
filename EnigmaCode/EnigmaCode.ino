@@ -24,7 +24,7 @@ int walzeIVArray[26] = {4, 18, 14, 21, 15, 25, 9, 0, 24, 16, 20, 8, 17, 7, 23, 1
 int walzeVArray[26] = {21, 25, 1, 17, 6, 8, 19, 24, 20, 15, 18, 3, 13, 7, 11, 23, 0, 22, 12, 9, 16, 14, 5, 4, 2, 11};
 
 //Walze Rotation
-int walzenSelected[3] = {0, 0, 0};
+int walzenSelected[3] = {0, 1, 2};
 char walzenRotationLetters[] = "rfwka";
 
 //Walze Orientation
@@ -35,13 +35,13 @@ char walze3Orientation[28] = "abcdefghijklmnopqrstuvwxyz..";
 //Variables
 char message[20];
 int encryptedLetter;
-
 int positionUnoccupied = -1; 
 
 //----------------------------------------------------------
 //METHODS
 
 void setup() {
+  Serial.begin(9600);
   for (int i = 0; i < 26; i++) steckerbrettArray[i] = i;  
   walzenScreenRefresh();
 }
@@ -50,8 +50,8 @@ void loop() {
   // put your main code here, to run repeatedly:
   delay(500);
   rotateWalzen();
-  encryptedLetter = random(26);
-  outputScreen();
+  encryptedLetter = random(25);
+  encrypt();
 }
 
 void rotateWalzen() {
@@ -149,7 +149,7 @@ void walzenForwards() {
 }
 
 void forwardWalze(int walzeNumber) {
-  int currentValue;
+  /*int currentValue;
   char currentLetter;
   if (walzeNumber == 0) currentLetter = walze1Orientation[encryptedLetter];
   else if (walzeNumber == 1) currentLetter = walze2Orientation[encryptedLetter];
@@ -185,6 +185,39 @@ void forwardWalze(int walzeNumber) {
     else if (walzeNumber == 2 && walze3Orientation[i] == currentLetter) {
       encryptedLetter = i;
     }
+  }*/
+  char entryLetter;
+  int positionOrder;
+  int newPosition;
+  char newLetter;
+  int finalOrientation;
+  
+  if (walzeNumber == 0) entryLetter = walze1Orientation[encryptedLetter];
+  else if (walzeNumber == 1) entryLetter = walze2Orientation[encryptedLetter];
+  else if (walzeNumber == 2) entryLetter = walze3Orientation[encryptedLetter];
+  for (int i = 0; i < 26; i++) if (alphabet[i] == entryLetter) positionOrder = i; 
+  switch (walzenSelected[walzeNumber]) {
+    case 0:
+      newPosition = walzeIArray[positionOrder];
+      break;
+    case 1:
+      newPosition = walzeIIArray[positionOrder];
+      break;
+    case 2:
+      newPosition = walzeIIIArray[positionOrder];
+      break;
+    case 3:
+      newPosition = walzeIVArray[positionOrder];
+      break;
+    case 4:
+      newPosition = walzeVArray[positionOrder];
+      break;
+  }
+  newLetter = alphabet[newPosition];
+  for (int i = 0; i < 26; i++) {
+    if (walzeNumber == 0 && newLetter == walze1Orientation[i]) finalOrientation = i;
+    else if (walzeNumber == 1 && newLetter == walze2Orientation[i]) finalOrientation = i;
+    else if (walzeNumber == 2 && newLetter == walze3Orientation[i]) finalOrientation = i;
   }
 }
 
@@ -201,7 +234,7 @@ void walzenBackwards() {
 }
 
 void backwardWalze(int walzeNumber) {
-  int currentValue;
+  /*int currentValue;
   char currentLetter;
   switch (walzeNumber) {
     case 0:
@@ -214,9 +247,11 @@ void backwardWalze(int walzeNumber) {
       currentLetter = walze3Orientation[encryptedLetter];
       break;
   }
+  Serial.println(currentLetter);
   for (int i = 0; i < 26; i++) {
     if (alphabet[i] == currentLetter) currentValue = i;
   }
+  Serial.println(currentValue);
   for (int i = 0; i < 26; i++) {
     if (walzenSelected[walzeNumber] == 0 && walzeIArray[i] == currentValue) currentValue = i;
     else if (walzenSelected[walzeNumber] == 1 && walzeIIArray[i] == currentValue) currentValue = i;
@@ -224,10 +259,47 @@ void backwardWalze(int walzeNumber) {
     else if (walzenSelected[walzeNumber] == 3 && walzeIVArray[i] == currentValue) currentValue = i;
     else if (walzenSelected[walzeNumber] == 4 && walzeVArray[i] == currentValue) currentValue = i;
   }
+  Serial.println(currentValue);
   currentLetter = alphabet[currentValue];
   for (int i = 0; i < 26; i++) {
-    if (walzeNumber == 0 && walze1Orientation[currentValue] == currentLetter) encryptedLetter = i;
-    else if (walzeNumber == 1 && walze2Orientation[currentValue] == currentLetter) encryptedLetter = i;
-    else if (walzeNumber == 2 && walze3Orientation[currentValue] == currentLetter) encryptedLetter = i;
+    if (walzeNumber == 0 && walze1Orientation[i] == currentLetter) encryptedLetter = i;
+    else if (walzeNumber == 1 && walze2Orientation[i] == currentLetter) encryptedLetter = i;
+    else if (walzeNumber == 2 && walze3Orientation[i] == currentLetter) encryptedLetter = i;
+  }
+  Serial.println(encryptedLetter);*/
+  int endPos;
+
+  switch (walzenSelected[walzeNumber]) {
+    case 0:
+      for (int i = 0; i < 26; i++) if (walzeIArray[i] == encryptedLetter) endPos = i;
+      break;
+    case 1:
+      for (int i = 0; i < 26; i++) if (walzeIIArray[i] == encryptedLetter) endPos = i;
+      break;
+    case 2:
+      for (int i = 0; i < 26; i++) if (walzeIIIArray[i] == encryptedLetter) endPos = i;
+      break;
+    case 3: 
+      for (int i = 0; i < 26; i++) if (walzeIVArray[i] == encryptedLetter) endPos = i;
+      break;
+    case 4:
+      for (int i = 0; i < 26; i++) if (walzeVArray[i] == encryptedLetter) endPos = i;
+      break;
+  }
+
+  switch (walzeNumber) {
+    case 0:
+      for (int i = 0; i < 26; i++) if (walze1Orientation[i] == alphabet[endPos]) encryptedLetter = i;
+      break;
+    case 1:
+      for (int i = 0; i < 26; i++) if (walze2Orientation[i] == alphabet[endPos]) encryptedLetter = i;
+      break;
+    case 2:
+      for (int i = 0; i < 26; i++) if (walze3Orientation[i] == alphabet[endPos]) encryptedLetter = i;
+      break;
   }
 }
+
+/*void backwardWalze(int walzeNumber) {
+  
+}*/
