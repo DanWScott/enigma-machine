@@ -104,6 +104,8 @@ void introduction() {
   delay(900);
   display.clear();
   delay(100);//Pauses for 1 second.
+  outputLCD.init();
+  outputLCD.backlight(); //Clears the output screen.
 }
 
 //RotateWalzen rotates the rotors each time a key is pressed.
@@ -174,6 +176,46 @@ void outputScreen() {
   }
 }
 
+void rotorSettings(int rotorChosen, bool isForward) {
+  switch (rotorChosen) {
+    case 0:
+      if (isForward) {
+        walze1Orientation[26] = walze1Orientation[0];
+        for (int i = 0; i < 27; i++) walze1Orientation[i] = walze1Orientation[i + 1];
+      }
+      else {
+        for (int i = 26; i > 0; i--) walze1Orientation[i] = walze1Orientation[i - 1];
+        walze1Orientation[0] = walze1Orientation[26];
+        walze1Orientation[26] = walze1Orientation[27];
+      }
+      break;
+    case 1:
+      if (isForward) {
+        walze2Orientation[26] = walze2Orientation[0];
+        for (int i = 0; i < 27; i++) walze2Orientation[i] = walze2Orientation[i + 1];
+      }
+      else {
+        for (int i = 26; i > 0; i--) walze2Orientation[i] = walze2Orientation[i - 1];
+        walze2Orientation[0] = walze2Orientation[26];
+        walze2Orientation[26] = walze2Orientation[27];
+      }
+      break;
+    case 2:
+      if (isForward) {
+        walze3Orientation[26] = walze3Orientation[0];
+        for (int i = 0; i < 27; i++) walze3Orientation[i] = walze3Orientation[i + 1];
+      }
+      else {
+        for (int i = 26; i > 0; i--) walze3Orientation[i] = walze3Orientation[i - 1];
+        walze3Orientation[0] = walze3Orientation[26];
+        walze3Orientation[26] = walze3Orientation[27];
+      }
+      break;
+  }
+  resetOutput();
+  walzenScreenRefresh();
+}
+
 //AugmentRotors changes the rotor in the selected position such that different encryptions are available.
 void augmentRotors(int rotorChosen) {
   int newRotor = walzenSelected[rotorChosen];
@@ -193,6 +235,13 @@ void augmentRotors(int rotorChosen) {
   for (int i3 = 0; i3 < 3; i3++) display.showNumberDec(walzenSelected[i3] + 1, false, 1, i3 + 1); //Prints the currently selected rotors on the 7-segment.
 }
 
+//ResetOutput resets the machine's output to be null.
+void resetOutput() {
+  for (int i = 0; i < 20; i++) message[i] = " ";
+  positionUnoccupied = -1;
+  outputScreen();
+}
+
 //----------------------------------------------------------
 //ENCRYPTION STAGES
 
@@ -204,7 +253,6 @@ void encrypt() {
   umkehrwalze(); //Sends the letter through the reflector.
   walzenBackwards(); //Feeds the letter through three rotors from left to right.
   steckerbrett(); //Sends the letter through the plugboard.
-  outputScreen(); //Prints the output.
 }
 
 //Steckerbrett simulates the electrical signal being sent through the enigma machine's plugboard.
