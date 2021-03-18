@@ -74,12 +74,7 @@ void setup() {
 
 //Loop runs each time the code is refreshed.
 void loop() {
-  delay(500); //Pauses the code for 0.5 seconds.
-  int newInt = random(2);
-  augmentRotors(newInt);
-  /*rotateWalzen(); 
-  encryptedLetter = random(25);
-  encrypt();*/
+  
 }
 
 //Introduction introduces the project by printing on the LCD Screens/7-segment.
@@ -203,6 +198,7 @@ void augmentRotors(int rotorChosen) {
 
 //Encrypt sends the user input through each stage of the digitalised encryption algorithm.
 void encrypt() {
+  rotateWalzen();
   steckerbrett(); //Sends the letter through the plugboard.
   walzenForwards(); //Feeds the letter through three rotors from right to left.
   umkehrwalze(); //Sends the letter through the reflector.
@@ -216,24 +212,25 @@ void steckerbrett() {
   encryptedLetter = steckerbrettArray[encryptedLetter]; //The plugboard is a straight substitution where one input will be replaced with another.
 }
 
+//WalzenForwards runs the encryption through each of the three rotors, one after the other.
 void walzenForwards() {
   forwardWalze(2);
   forwardWalze(1);
   forwardWalze(0);
 }
 
+//ForwardWalze simulates the letter's encryption travelling from the steckerbrett to the umkehrwalze.
+//WalzeNumber is the number of the rotor (in terms of the order in which the code passes through them).
 void forwardWalze(int walzeNumber) {
-  char entryLetter;
+  char entryLetter; 
   int positionOrder;
   int newPosition;
   char newLetter;
-  int finalOrientation;
-  
-  if (walzeNumber == 0) entryLetter = walze1Orientation[encryptedLetter];
+  if (walzeNumber == 0) entryLetter = walze1Orientation[encryptedLetter]; //EntryLetter is the letter that the encryption corresponds to on entering the rotor.
   else if (walzeNumber == 1) entryLetter = walze2Orientation[encryptedLetter];
   else if (walzeNumber == 2) entryLetter = walze3Orientation[encryptedLetter];
-  for (int i = 0; i < 26; i++) if (alphabet[i] == entryLetter) positionOrder = i; 
-  switch (walzenSelected[walzeNumber]) {
+  for (int i = 0; i < 26; i++) if (alphabet[i] == entryLetter) positionOrder = i; //PositionOrder determines what position in the alphabet entryLetter occupies.
+  switch (walzenSelected[walzeNumber]) { //NewPosition is the position of the alphabet of the rotor's output value.
     case 0:
       newPosition = walzeIArray[positionOrder];
       break;
@@ -250,11 +247,11 @@ void forwardWalze(int walzeNumber) {
       newPosition = walzeVArray[positionOrder];
       break;
   }
-  newLetter = alphabet[newPosition];
-  for (int i = 0; i < 26; i++) {
-    if (walzeNumber == 0 && newLetter == walze1Orientation[i]) finalOrientation = i;
-    else if (walzeNumber == 1 && newLetter == walze2Orientation[i]) finalOrientation = i;
-    else if (walzeNumber == 2 && newLetter == walze3Orientation[i]) finalOrientation = i;
+  newLetter = alphabet[newPosition]; //NewLetter is the letter output of the rotor's encryption.
+  for (int i = 0; i < 26; i++) { //Finds the position within the machine's cross-section that the encryption is mapped to.
+    if (walzeNumber == 0 && newLetter == walze1Orientation[i]) encryptedLetter = i;
+    else if (walzeNumber == 1 && newLetter == walze2Orientation[i]) encryptedLetter = i;
+    else if (walzeNumber == 2 && newLetter == walze3Orientation[i]) encryptedLetter = i;
   }
 }
 
@@ -264,42 +261,44 @@ void umkehrwalze() {
   encryptedLetter = umkehrwalzeArray[encryptedLetter];
 }
 
+//WalzenBackwards runs the encryption through each of the three rotors, one after the other.
 void walzenBackwards() {
   backwardWalze(0);
   backwardWalze(1);
   backwardWalze(2);
 }
 
+//BackwardWalze simulates the letter's encryption travelling from the umkehrwalze back to the steckerbrett.
 void backwardWalze(int walzeNumber) {
-  int endPos;
-
-  switch (walzenSelected[walzeNumber]) {
+  char letterIn;
+  int exitPos;
+  int entryPos;
+  char letterOut;
+  if (walzeNumber == 0) letterIn = walze1Orientation[encryptedLetter]; //LetterIn determines the letter that the encryption corresponds to on entering the rotor.
+  else if (walzeNumber == 1) letterIn = walze2Orientation[encryptedLetter];
+  else if (walzeNumber == 2) letterIn = walze3Orientation[encryptedLetter];
+  for (int i = 0; i < 26; i++) if (alphabet[i] == letterIn) exitPos = i; //Finds the position of letterIn in the alphabet.
+  switch (walzenSelected[walzeNumber]) { //Finds out what input letter would map to the output "letterIn" (using the same wiring as forwardWalze but in reverse).
     case 0:
-      for (int i = 0; i < 26; i++) if (walzeIArray[i] == encryptedLetter) endPos = i;
+      for (int i = 0; i < 26; i++) if (walzeIArray[i] == exitPos) entryPos = i;
       break;
     case 1:
-      for (int i = 0; i < 26; i++) if (walzeIIArray[i] == encryptedLetter) endPos = i;
+      for (int i = 0; i < 26; i++) if (walzeIIArray[i] == exitPos) entryPos = i;
       break;
     case 2:
-      for (int i = 0; i < 26; i++) if (walzeIIIArray[i] == encryptedLetter) endPos = i;
+      for (int i = 0; i < 26; i++) if (walzeIIIArray[i] == exitPos) entryPos = i;
       break;
     case 3: 
-      for (int i = 0; i < 26; i++) if (walzeIVArray[i] == encryptedLetter) endPos = i;
+      for (int i = 0; i < 26; i++) if (walzeIVArray[i] == exitPos) entryPos = i;
       break;
     case 4:
-      for (int i = 0; i < 26; i++) if (walzeVArray[i] == encryptedLetter) endPos = i;
+      for (int i = 0; i < 26; i++) if (walzeVArray[i] == exitPos) entryPos = i;
       break;
   }
-
-  switch (walzeNumber) {
-    case 0:
-      for (int i = 0; i < 26; i++) if (walze1Orientation[i] == alphabet[endPos]) encryptedLetter = i;
-      break;
-    case 1:
-      for (int i = 0; i < 26; i++) if (walze2Orientation[i] == alphabet[endPos]) encryptedLetter = i;
-      break;
-    case 2:
-      for (int i = 0; i < 26; i++) if (walze3Orientation[i] == alphabet[endPos]) encryptedLetter = i;
-      break;
+  letterOut = alphabet[entryPos]; //Finds the letter corresponding to the final position the rotor provides.
+  for (int i = 0; i < 26; i++) { //Determines the position in the machine's cross-section that the encryption maps to.
+    if (walzeNumber == 0 && letterOut == walze1Orientation[i]) encryptedLetter = i;
+    else if (walzeNumber == 1 && letterOut == walze2Orientation[i]) encryptedLetter = i;
+    else if (walzeNumber == 2 && letterOut == walze3Orientation[i]) encryptedLetter = i;
   }
 }
