@@ -7,10 +7,15 @@
 #include <Wire.h> //Needed to include Wire.h to send signals down CLK pins.
 #include <LiquidCrystal_I2C.h> //Included LiquidCrystal_I2C.h in order to run the LCD screens.
 #include <TM1637Display.h> //Included TM1637Display.h to run the 4-digit 7-segment display with an HW-069 backpack.
+#include <Adafruit_NeoPixel.h> //Included Adafruit_Neopixel.h to run the addressable RGB LEDs.
+#ifdef __AVR__
+#include <avr/power.h> //Apparently this is also required for the RGB LEDs.
+#endif
 
 //Define Connection Pins
 #define CLK 23 //Define the 7-segment's Clock pin
 #define DIO 22 //Define the 7-segment's Digital Input/Output pin
+#define RGB_LED_DIO 6 //Define the RGB LEDs' Digital pin.
 
 //LCD Setup
 LiquidCrystal_I2C walzenLCD(0x3F, 16, 2); //Establishes an LCD Screen/I2C module with the address 0x3E (A0 connected)
@@ -20,14 +25,14 @@ LiquidCrystal_I2C outputLCD(0x3E, 16, 2); //Establishes an LCD Screen/I2C module
 TM1637Display display = TM1637Display(CLK, DIO); //Established a TM1637 1x4 7-segment display with HW-069 backpack.
 
 //7-segment display readings
-const uint8_t dan[] {
+const uint8_t DAN[] {
   SEG_B | SEG_C | SEG_D | SEG_E | SEG_G, //d
   SEG_A | SEG_B | SEG_C | SEG_G | SEG_E | SEG_F, //A
   SEG_C | SEG_E | SEG_G, //n
   0x00
 }; //Prints the word "dAn" on the 7-segment.
 
-const uint8_t dte[] {
+const uint8_t DTE[] {
   SEG_B | SEG_C | SEG_D | SEG_E | SEG_G, //d
   SEG_D | SEG_E | SEG_F | SEG_G, //t
   SEG_A | SEG_D | SEG_E | SEG_F | SEG_G, //E
@@ -35,7 +40,22 @@ const uint8_t dte[] {
 }; //Prints the word "dtE" on the 7-segment.
 
 //Constants
-const char alphabet[26] = "abcdefghijklmnopqrstuvwxyz"; //An array to establish the order of the alphabet within code.
+const char ALPHABET[26] = "abcdefghijklmnopqrstuvwxyz"; //An array to establish the order of the alphabet within code.
+
+//RGB LED Setup
+const int RGB_LED_COUNT = 26; //There are 26 RGB LEDs in the LED array.
+Adafruit_NeoPixel ledArray(RGB_LED_COUNT, RGB_LED_DIO, NEO_GRB + NEO_KHZ800); //Establishes an array of 26 RGB LEDs.
+
+const int[3] RED = {0, 255, 0}; //Basic Red.
+const int[3] LIME = {255, 0, 0}; //Lime Green.
+const int[3] BLUE = {0, 0, 255}; //Basic Blue.
+const int[3] ORANGE;
+const int[3] MUSTARD = {204, 255, 18}; //Mustard yellow.
+const int[3] MAGENTA = {0, 204, 204}; //Magenta/purple.
+const int[3] PINK;
+const int[3] TURQUOISE = {245, 0, 255}; //Turquoise blue.
+const int[3] VIOLET;
+const int[3] WHITE = {255, 255, 255}; //Basic White.
 
 //Substitution Arrays
 int steckerbrettArray[26]; //An array to establish the substitution pattern of the plugboard.
@@ -92,11 +112,11 @@ void introduction() {
   outputLCD.setCursor(2,1);
   outputLCD.print("DTE PROJECT"); //Prints "DAN SCOTT/DTE PROJECT" on the LCD Screen.
   display.setBrightness(7); //Initialise the 7-segment.
-  display.setSegments(dan); //Print "dAn" on the 7-segment.
+  display.setSegments(DAN); //Print "dAn" on the 7-segment.
   delay(900);
   display.clear();
   delay(100); //Pauses for 1 second.
-  display.setSegments(dte); //Print "dtE" on the 7-segment.
+  display.setSegments(DTE); //Print "dtE" on the 7-segment.
   delay(900);
   display.clear();
   delay(100); //Pauses for 1 second.
@@ -153,7 +173,7 @@ void outputScreen() {
     }
     positionUnoccupied -= 10;
   }
-  message[positionUnoccupied] = toUpperCase(alphabet[encryptedLetter]); //Puts the encrypted letter into the first free character in the array.*/
+  message[positionUnoccupied] = toUpperCase(ALPHABET[encryptedLetter]); //Puts the encrypted letter into the first free character in the array.*/
   outputLCD.init(); //Initialises the LCD.
   outputLCD.backlight(); //Turns on the LCD's backlight.
   outputLCD.setCursor(2,0); //Starts printing in the third column of the first row.
@@ -285,7 +305,7 @@ void forwardWalze(int walzeNumber) {
       entryLetter = walze3Orientation[encryptedLetter];
       break;
   }
-  for (int i = 0; i < 26; i++) if (alphabet[i] == entryLetter) positionOrder = i; //PositionOrder determines what position in the alphabet entryLetter occupies.
+  for (int i = 0; i < 26; i++) if (ALPHABET[i] == entryLetter) positionOrder = i; //PositionOrder determines what position in the alphabet entryLetter occupies.
   switch (walzenSelected[walzeNumber]) { //NewPosition is the position of the alphabet of the rotor's output value.
     case 0:
       newPosition = walzeIArray[positionOrder];
@@ -303,7 +323,7 @@ void forwardWalze(int walzeNumber) {
       newPosition = walzeVArray[positionOrder];
       break;
   }
-  newLetter = alphabet[newPosition]; //NewLetter is the letter output of the rotor's encryption.
+  newLetter = ALPHABET[newPosition]; //NewLetter is the letter output of the rotor's encryption.
   switch (walzeNumber) { //Finds the position within the machine's cross-section that the encryption is mapped to.
     case 0: 
       for (int i = 0; i < 26; i++) if (newLetter == walze1Orientation[i]) encryptedLetter = i;
@@ -347,7 +367,7 @@ void backwardWalze(int walzeNumber) {
       letterIn = walze3Orientation[encryptedLetter];
       break;
   }
-  for (int i = 0; i < 26; i++) if (alphabet[i] == letterIn) exitPos = i; //Finds the position of letterIn in the alphabet.
+  for (int i = 0; i < 26; i++) if (ALPHABET[i] == letterIn) exitPos = i; //Finds the position of letterIn in the alphabet.
   switch (walzenSelected[walzeNumber]) { //Finds out what input letter would map to the output "letterIn" (using the same wiring as forwardWalze but in reverse).
     case 0:
       for (int i = 0; i < 26; i++) if (walzeIArray[i] == exitPos) entryPos = i;
@@ -365,7 +385,7 @@ void backwardWalze(int walzeNumber) {
       for (int i = 0; i < 26; i++) if (walzeVArray[i] == exitPos) entryPos = i;
       break;
   }
-  letterOut = alphabet[entryPos]; //Finds the letter corresponding to the final position the rotor provides.
+  letterOut = ALPHABET[entryPos]; //Finds the letter corresponding to the final position the rotor provides.
   switch (walzeNumber) { //Determines the position in the machine's cross-section that the encryption maps to.
     case 0:
       for (int i = 0; i < 26; i++) if (letterOut == walze1Orientation[i]) encryptedLetter = i;

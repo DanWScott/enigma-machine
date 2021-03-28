@@ -28,9 +28,9 @@ pixels.begin();
 void loop() {
 pixels.clear();
 pixels.setBrightness(10);
-pixels.setPixelColor(0, pixels.Color(255, 0, 0));
-pixels.setPixelColor(1, pixels.Color(0, 255, 0));
-pixels.setPixelColor(2, pixels.Color(0, 0, 255));
+pixels.setPixelColor(0, pixels.Color(0, 204, 204));
+pixels.setPixelColor(1, pixels.Color(155, 255, 255));
+pixels.setPixelColor(2, pixels.Color(255, 255, 255));
 /*pixels.setPixelColor(2, pixels.Color(0, 255, 0));
 pixels.setPixelColor(3, pixels.Color(0, 0, 255));
 pixels.setPixelColor(4, pixels.Color(255, 0, 255));
