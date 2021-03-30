@@ -1,5 +1,6 @@
 //DANIEL SCOTT
 //ENIGMA MACHINE 2021
+//AS91900/AS91907
 
 //INITIALISATIONS
 
@@ -46,7 +47,7 @@ const char ALPHABET[26] = "abcdefghijklmnopqrstuvwxyz"; //An array to establish 
 const int RGB_LED_COUNT = 26; //There are 26 RGB LEDs in the LED array.
 Adafruit_NeoPixel ledArray(RGB_LED_COUNT, RGB_LED_DIO, NEO_GRB + NEO_KHZ800); //Establishes an array of 26 RGB LEDs.
 bool steckerColoursUsed[10]; //An array to store which colours have and have not been used to indicate steckered pairs.
-int coloursByStecker[26];
+int coloursByStecker[26]; //An array that stores which colour each plug's LED is, so that when they are unsteckered the colour may be identified and reused.
 int rgbLedValues[26][3]; //A 2D array to store the values of R, G and B for each of the 26 RGB LEDs.
 
 //RGB Codes for Colours
@@ -61,6 +62,7 @@ const int TURQUOISE[3] = {245, 0, 255}; //Turquoise blue.
 const int VIOLET[3];
 const int WHITE[3] = {255, 255, 255}; //Basic White.*/ 
 
+//An array that stores the RGB values of 10 different colours that can be used to represent steckered pairs.
 const int RGB_CODES[10][3] = {{0, 255, 0}/*RED*/, {255, 0, 0}/*LIME*/, {0, 0, 255}/*BLUE*/, {0, 0, 0} /*ORANGE*/, {204, 255, 18} /*MUSTARD*/, {0, 204, 204} /*MAGENTA*/, {0, 0, 0} /*PINK*/, {245, 0, 255} /*TURQUOISE*/, {255, 255, 255} /*WHITE*/}; 
 
 //Substitution Arrays
@@ -85,8 +87,8 @@ char walze3Orientation[28] = "abcdefghijklmnopqrstuvwxyz..";
 char message[20]; //A character array to store the latest output.
 int encryptedLetter; //An integer character to store the position of the encrypted letetr within the alphabet array (easier to work with than characters).
 int positionUnoccupied = -1; //Ensures the message population code works.
-int steckerPair;
-bool settingSteckerPair = false;
+int steckerPair; //An integer to store the value of the last plug selected when steckering.
+bool settingSteckerPair = false; //A boolean to store whether or not the user is currently establishing a new steckered pair.
 
 //----------------------------------------------------------
 //METHODS
@@ -94,13 +96,15 @@ bool settingSteckerPair = false;
 //Setup runs once when the code is started.
 void setup() {
   Serial.begin(9600); //Starts the Serial Monitor for testing.
+  ledArray.begin(); //Initialise the RGB LEDs.
   for (int i = 0; i < 26; i++) steckerbrettArray[i] = i; //Populates the plugboard array such that there is no substitution originally.
   for (int i = 0; i < 10; i++) steckerColoursUsed[i] = false; //Populates the array to indicate that no plugs are currently steckered.
   for (int i1 = 0; i1 < 26; i1++) for (int i2 = 0; i2 < 3; i2++) rgbLedValues[i1][ i2] = 0; //Initialises the RGB LEDs so that they are all turned off.
-  for (int i = 0; i < 26; i++) coloursByStecker[i] = 10;
+  for (int i = 0; i < 26; i++) coloursByStecker[i] = 10; //Populate the coloursByStecker array with ints that are invalid but can still be used for operations if required.
   introduction(); //Runs the introduction code to introduce the project.
   for (int i = 0; i < 3; i++) display.showNumberDec(walzenSelected[i] + 1, false, 1, i + 1); //Prints the currently selected rotors on the 7-segment.
   walzenScreenRefresh(); //Shows the current orientations of the three rotors.
+  refreshLeds(); //Initialise the RGB LEDs.
 }
 
 //Loop runs each time the code is refreshed.
@@ -112,8 +116,8 @@ void loop() {
 void introduction() { 
   walzenLCD.init(); //Initialise the rotor LCD.
   walzenLCD.backlight();
-  walzenLCD.setCursor(4,0);
-  walzenLCD.print("AS91907");
+  walzenLCD.setCursor(1,0);
+  walzenLCD.print("AS91907/AS91900");
   walzenLCD.setCursor(1,1);
   walzenLCD.print("ENIGMA MACHINE"); //Prints "AS91907/ENIGMA MACHINE" on the LCD Screen.
   outputLCD.init();
@@ -173,7 +177,6 @@ void walzenScreenRefresh() {
   walzenLCD.print("|"); //Prints the three rotors' orientations.
 }
 
-
 //Changes the output shown on the output screen.
 void outputScreen() {
   positionUnoccupied++; //Checks how many letters are in the output array.
@@ -207,14 +210,17 @@ void outputScreen() {
   }
 }
 
+//RotorSettings allows the user to manually change the rotations of a selected rotor.
+//RotorChosen indicates which rotor is being rotated, and isForward indicates whether it is being rotated forwards or backwards.
 void rotorSettings(int rotorChosen, bool isForward) {
+  //Figures out which rotor is being turned.
   switch (rotorChosen) {
     case 0:
-      if (isForward) {
+      if (isForward) { //Rotates through to the next letter if required.
         walze1Orientation[26] = walze1Orientation[0];
         for (int i = 0; i < 27; i++) walze1Orientation[i] = walze1Orientation[i + 1];
       }
-      else {
+      else { //Rotates to the previous letter if required.
         for (int i = 26; i > 0; i--) walze1Orientation[i] = walze1Orientation[i - 1];
         walze1Orientation[0] = walze1Orientation[26];
         walze1Orientation[26] = walze1Orientation[27];
@@ -243,27 +249,29 @@ void rotorSettings(int rotorChosen, bool isForward) {
       }
       break;
   }
-  resetOutput();
-  walzenScreenRefresh();
+  resetOutput(); //Changing the settings clears the output.
+  walzenScreenRefresh(); //Refreshes the screen displaying rotor orientations to show the change.
 }
 
 //AugmentRotors changes the rotor in the selected position such that different encryptions are available.
+//RotorChosen indicates which rotor will be replaced.
 void augmentRotors(int rotorChosen) {
-  int newRotor = walzenSelected[rotorChosen];
-  bool retry = false;
-  if (newRotor < 4) newRotor++;
+  int newRotor = walzenSelected[rotorChosen]; //Figures out the rotor currently in the selected position.
+  bool retry = false; //A boolean to check whether the new rotor is already in use so that rotors cannot be duplicated.
+  if (newRotor < 4) newRotor++; //Rotates through to another rotor.
   else newRotor = 0;
-  for (int i1 = 0; i1 < 3; i1++) if (walzenSelected[i1] == newRotor) {
+  for (int i1 = 0; i1 < 3; i1++) if (walzenSelected[i1] == newRotor) { //Checks to make sure rotors are not duplicated.
     if (newRotor < 4) newRotor++;
     else newRotor = 0;
     retry = true;
   }
-  if (retry) for (int i2 = 0; i2 < 3; i2++) if (walzenSelected[i2] == newRotor) {
+  if (retry) for (int i2 = 0; i2 < 3; i2++) if (walzenSelected[i2] == newRotor) { //Changes the rotor again if a rotor is still being duplicated.
     if (newRotor < 4) newRotor++;
     else newRotor = 0;
   }
-  walzenSelected[rotorChosen] = newRotor;
+  walzenSelected[rotorChosen] = newRotor; //Substitutes the rotor in the selected position for the new rotor.
   for (int i3 = 0; i3 < 3; i3++) display.showNumberDec(walzenSelected[i3] + 1, false, 1, i3 + 1); //Prints the currently selected rotors on the 7-segment.
+  resetOutput(); //Chnaging the settings resets the output.
 }
 
 //ResetOutput resets the machine's output to be null.
@@ -273,18 +281,26 @@ void resetOutput() {
   outputScreen();
 }
 
+//RefreshLeds resends a signal to the array of RGB LEDs so that they are displaying the most recently decided colours.
+void refreshLeds() {
+  ledArray.clear();
+  ledArray.setBrightness(10);
+  for (int i = 0; i < 26; i++) ledArray.setPixelColor(i, ledArray.Color(rgbLedValues[i][0], rgbLedValues[i][1], rgbLedValues[i][2]));
+}
+
 //ChangeLeds() changes the R, G and B values of one of the 26 LEDS.
+//LedChanging indicates the position in the RGB LED array of the LED that is changing colour.
 void changeLeds(int ledChanging) {
-  int colourOrder;
+  int colourOrder; //An integer to represent the colour that will illuminate the LEDs.
   bool availableStecker = false;
-  for (int i = 9; i >= 0; i--) if (!steckerColoursUsed[i]) {
+  for (int i = 9; i >= 0; i--) if (!steckerColoursUsed[i]) { //Finds the most preferred colour that is currently available to be used as a stecker.
       colourOrder = i;
       availableStecker = true;
   }
-  if (availableStecker && steckerbrettArray[ledChanging] == ledChanging) {
-    for (int i = 0; i < 3; i++) rgbLedValues[ledChanging][i] = RGB_CODES[colourOrder][i];
-    if (!settingSteckerPair) steckerPair = ledChanging;
-    else {
+  if (availableStecker && steckerbrettArray[ledChanging] == ledChanging) { //What the code should do if more steckered pairs are able to be created, and the plug selected can be involved in a new steckered pair.
+    for (int i = 0; i < 3; i++) rgbLedValues[ledChanging][i] = RGB_CODES[colourOrder][i]; //Changes the colour of the selected LED to the selected colour.
+    if (!settingSteckerPair) steckerPair = ledChanging; //If no plug has been selected to pair teh new plug with, log the identity of the newly selected plug.
+    else { //If the plug has a pair to stecker with, establish the stecker between the two plugs.
       steckerbrettArray[ledChanging] = steckerPair;
       steckerbrettArray[steckerPair] = ledChanging;
       steckerColoursUsed[colourOrder] = true;
@@ -293,20 +309,27 @@ void changeLeds(int ledChanging) {
     }
     settingSteckerPair = !settingSteckerPair;
   }
-  if (steckerbrettArray[ledChanging] != ledChanging) {
-    if (settingSteckerPair) {
-      for (int i = 0; i < 3; i++) rgbLedValues[ledChanging][i] = 0;
-      settingSteckerPair = false;
-    }
-    int pairedPosition = steckerbrettArray[ledChanging];
-    for (int i = 0; i < 3; i++) rgbLedValues[pairedPosition][i] = 0;
+  if (steckerbrettArray[ledChanging] != ledChanging) { //What the code should do if the plug selected is already steckered.
+    steckerReset(); //Stops trying to establish a stecker with an already defined plug.
+    int pairedPosition = steckerbrettArray[ledChanging]; //Find the plug that the plug is steckered with.
+    for (int i = 0; i < 3; i++) rgbLedValues[pairedPosition][i] = 0; //Turn off the LEDs indicating steckers for the two relevant plugs.
     for (int i = 0; i < 3; i++) rgbLedValues[ledChanging][i] = 0;
-    steckerbrettArray[ledChanging] = ledChanging;
+    steckerbrettArray[ledChanging] = ledChanging; //Unsteckers the plugs.
     steckerbrettArray[pairedPosition] = pairedPosition;
-    steckerColoursUsed[coloursByStecker[ledChanging]] = false;
+    steckerColoursUsed[coloursByStecker[ledChanging]] = false; //Frees up the colour representing the stecker link to be used in new steckers.
     coloursByStecker[ledChanging] = 10;
     coloursByStecker[pairedPosition] = 10;
   }
+  refreshLeds(); //Refresh the LEDs.
+  resetOutput(); //Changing the settings resets the output.
+}
+
+//SteckerReset finds any plugs that are halfway through establishing a new steckered pair and unselects them.
+void steckerReset() {
+  if (settingSteckerPair) {
+      for (int i = 0; i < 3; i++) rgbLedValues[steckerPair][i] = 0;
+      settingSteckerPair = false;
+    }
 }
 
 //----------------------------------------------------------
@@ -314,6 +337,7 @@ void changeLeds(int ledChanging) {
 
 //Encrypt sends the user input through each stage of the digitalised encryption algorithm.
 void encrypt() {
+  steckerReset();
   rotateWalzen();
   steckerbrett(); //Sends the letter through the plugboard.
   walzenForwards(); //Feeds the letter through three rotors from right to left.
