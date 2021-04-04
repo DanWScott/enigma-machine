@@ -2,6 +2,11 @@
 //ENIGMA MACHINE 2021
 //AS91900/AS91907
 
+//REMINDER
+//Fix the code for the steckerbrett and the illumination of LEDs
+//I think I established the RGB LED array such that LED[0] = A, LED[1] = B and so on, which will NOT be the case in wiring.
+
+
 //INITIALISATIONS
 
 //Libraries
