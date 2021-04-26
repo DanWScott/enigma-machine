@@ -14,7 +14,7 @@ https://electropeak.com/learn/
 #endif
 
 #define PIN      6
-#define NUMPIXELS 3
+#define NUMPIXELS 27
 
 
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
@@ -23,13 +23,18 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
 pixels.begin();
+
+pixels.clear();
+pixels.setBrightness(10);
+
+for (int i = 0; i < NUMPIXELS; i++) {
+  pixels.setPixelColor(i, pixels.Color(0, 255, 0));
+}
+pixels.show();
 }
 
 void loop() {
-pixels.clear();
-pixels.setBrightness(10);
-pixels.setPixelColor(0, pixels.Color(255, 0, 0));
-pixels.setPixelColor(1, pixels.Color(0, 204, 204));
-pixels.setPixelColor(2, pixels.Color(0, 148, 212));
-pixels.show();
+
+
+delay(DELAYVAL);
 }
