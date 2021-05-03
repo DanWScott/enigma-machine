@@ -28,7 +28,9 @@ pixels.clear();
 pixels.setBrightness(10);
 
 for (int i = 0; i < NUMPIXELS; i++) {
-  pixels.setPixelColor(i, pixels.Color(0, 255, 0));
+  if (i % 3 == 0) pixels.setPixelColor(i, pixels.Color(0, 255, 0));
+  else if (i % 3 == 1) pixels.setPixelColor(i, pixels.Color(255, 0, 0));
+  else pixels.setPixelColor(i, pixels.Color(0, 0, 255));
 }
 pixels.show();
 }
