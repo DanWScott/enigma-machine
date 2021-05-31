@@ -6,6 +6,8 @@
 //Fix the code for the steckerbrett and the illumination of LEDs
 //I think I established the RGB LED array such that LED[0] = A, LED[1] = B and so on, which will NOT be the case in wiring.
 
+//Fix all of the pin definitions once I figure out where they all go
+
 
 //INITIALISATIONS
 
@@ -121,16 +123,16 @@ void loop() {
 void introduction() { 
   walzenLCD.init(); //Initialise the rotor LCD.
   walzenLCD.backlight();
-  walzenLCD.setCursor(1,0);
-  walzenLCD.print("AS91907/AS91900");
+  walzenLCD.setCursor(0,0);
+  walzenLCD.print("M3 FUNKSCHLÜSSEL");
   walzenLCD.setCursor(1,1);
-  walzenLCD.print("ENIGMA MACHINE"); //Prints "AS91907/ENIGMA MACHINE" on the LCD Screen.
+  walzenLCD.print("ENIGMA MACHINE"); //Prints "AS91904/ENIGMA MACHINE" on the LCD Screen.
   outputLCD.init();
   outputLCD.backlight(); //Initialise the output LCD.
   outputLCD.setCursor(3,0);
   outputLCD.print("DAN SCOTT");
-  outputLCD.setCursor(2,1);
-  outputLCD.print("DTE PROJECT"); //Prints "DAN SCOTT/DTE PROJECT" on the LCD Screen.
+  outputLCD.setCursor(3,1);
+  outputLCD.print("DT PROJECT"); //Prints "DAN SCOTT/DTE PROJECT" on the LCD Screen.
   display.setBrightness(7); //Initialise the 7-segment.
   display.setSegments(DAN); //Print "dAn" on the 7-segment.
   delay(900);
@@ -295,7 +297,7 @@ void refreshLeds() {
 
 //ChangeLeds() changes the R, G and B values of one of the 26 LEDS.
 //LedChanging indicates the position in the RGB LED array of the LED that is changing colour.
-void changeLeds(int ledChanging) {
+/*void changeLeds(int ledChanging) {
   int colourOrder; //An integer to represent the colour that will illuminate the LEDs.
   bool availableStecker = false;
   for (int i = 9; i >= 0; i--) if (!steckerColoursUsed[i]) { //Finds the most preferred colour that is currently available to be used as a stecker.
@@ -327,7 +329,7 @@ void changeLeds(int ledChanging) {
   }
   refreshLeds(); //Refresh the LEDs.
   resetOutput(); //Changing the settings resets the output.
-}
+}*/ //DELETE ALL OF THIS IT IS ALL BAD
 
 //SteckerReset finds any plugs that are halfway through establishing a new steckered pair and unselects them.
 void steckerReset() {
