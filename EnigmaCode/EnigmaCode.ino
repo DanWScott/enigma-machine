@@ -15,6 +15,8 @@
 #include <Wire.h> //Needed to include Wire.h to send signals down CLK pins.
 #include <LiquidCrystal_I2C.h> //Included LiquidCrystal_I2C.h in order to run the LCD screens.
 #include <TM1637Display.h> //Included TM1637Display.h to run the 4-digit 7-segment display with an HW-069 backpack.
+#include <Key.h>
+#include <Keypad.h> //Two libraries needed to run keypad matrices.
 #include <Adafruit_NeoPixel.h> //Included Adafruit_Neopixel.h to run the addressable RGB LEDs.
 #ifdef __AVR__
 #include <avr/power.h> //Apparently this is also required for the RGB LEDs.
@@ -23,7 +25,27 @@
 //Define Connection Pins
 #define CLK 23 //Define the 7-segment's Clock pin
 #define DIO 22 //Define the 7-segment's Digital Input/Output pin
-#define RGB_LED_DIO 6 //Define the RGB LEDs' Digital pin.
+#define RGB_LED_DIO 7 //Define the RGB LEDs' Digital pin.
+
+//Keyboard Setup
+const byte ROWS = 2;
+const byte COLS = 13;
+
+char KEYS[ROWS][COLS] = {
+  {'q', 'w', 'e', 'r', 't', 'z', 'u', 'i', 'o', 'k', 'j', 'h', 'g'},
+  {'a', 's', 'd', 'f', 'p', 'y', 'x', 'c', 'v', 'l', 'm', 'n', 'b'}
+};
+
+byte kbColPins[COLS] = {50, 51, 52, 53, 44, 45, 46, 47, 42, 39, 41, 40, 43};
+byte kbRowPins[ROWS] = {48, 49};
+
+//Keypad keyboard = Keypad(makeKeymap(KEYS), kbRowPins, kbColPins, ROWS, COLS);
+
+//Steckerbrett Setup
+byte sbColPins[COLS] = {51, 48, 47, 46, 52, 50, 49, 45, 44, 25, 35, 42, 43};
+byte sbRowPins[ROWS] = {28, 24};
+
+Keypad keyboard = Keypad(makeKeymap(KEYS), sbRowPins, sbColPins, ROWS, COLS);
 
 //LCD Setup
 LiquidCrystal_I2C walzenLCD(0x3F, 16, 2); //Establishes an LCD Screen/I2C module with the address 0x3E (A0 connected)
@@ -52,25 +74,14 @@ const char ALPHABET[26] = "abcdefghijklmnopqrstuvwxyz"; //An array to establish 
 
 //RGB LED Setup
 const int RGB_LED_COUNT = 26; //There are 26 RGB LEDs in the LED array.
+const int ledOrder[26] = {15, 24, 23, 2, 21, 1, 13, 12, 11, 10, 9, 7, 6, 5, 3, 18, 0, 16, 22, 4, 17, 25, 20, 8, 14};
 Adafruit_NeoPixel ledArray(RGB_LED_COUNT, RGB_LED_DIO, NEO_GRB + NEO_KHZ800); //Establishes an array of 26 RGB LEDs.
 bool steckerColoursUsed[10]; //An array to store which colours have and have not been used to indicate steckered pairs.
 int coloursByStecker[26]; //An array that stores which colour each plug's LED is, so that when they are unsteckered the colour may be identified and reused.
 int rgbLedValues[26][3]; //A 2D array to store the values of R, G and B for each of the 26 RGB LEDs.
 
-//RGB Codes for Colours
-/*const int RED[3] = {0, 255, 0}; //Basic Red.
-const int LIME[3] = {255, 0, 0}; //Lime Green.
-const int BLUE[3] = {0, 0, 255}; //Basic Blue.
-const int ORANGE[3];
-const int MUSTARD[3] = {204, 255, 18}; //Mustard yellow.
-const int MAGENTA[3] = {0, 204, 204}; //Magenta/purple.
-const int PINK[3];
-const int TURQUOISE[3] = {245, 0, 255}; //Turquoise blue.
-const int VIOLET[3];
-const int WHITE[3] = {255, 255, 255}; //Basic White.*/ 
-
 //An array that stores the RGB values of 10 different colours that can be used to represent steckered pairs.
-const int RGB_CODES[10][3] = {{0, 255, 0}/*RED*/, {255, 0, 0}/*LIME*/, {0, 0, 255}/*BLUE*/, {0, 0, 0} /*ORANGE*/, {204, 255, 18} /*MUSTARD*/, {0, 204, 204} /*MAGENTA*/, {0, 0, 0} /*PINK*/, {245, 0, 255} /*TURQUOISE*/, {255, 255, 255} /*WHITE*/}; 
+const int RGB_CODES[10][3] = {{0, 255, 0}/*RED*/, {255, 0, 0}/*LIME*/, {0, 0, 255}/*BLUE*/, {120, 250, 50} /*ORANGE*/, {255, 255, 0} /*MUSTARD*/, {0, 204, 204} /*MAGENTA*/, {150, 255, 230} /*PINK*/, {245, 0, 255} /*TURQUOISE*/, {255, 255, 255} /*WHITE*/, {160, 0, 55} /*MINT GREEN*/}; 
 
 //Substitution Arrays
 int steckerbrettArray[26]; //An array to establish the substitution pattern of the plugboard.
@@ -94,8 +105,10 @@ char walze3Orientation[28] = "abcdefghijklmnopqrstuvwxyz..";
 char message[20]; //A character array to store the latest output.
 int encryptedLetter; //An integer character to store the position of the encrypted letetr within the alphabet array (easier to work with than characters).
 int positionUnoccupied = -1; //Ensures the message population code works.
-int steckerPair; //An integer to store the value of the last plug selected when steckering.
-bool settingSteckerPair = false; //A boolean to store whether or not the user is currently establishing a new steckered pair.
+
+bool settingSteckerPair = false;
+int lastLedPressed;
+int orderColoursUsed[10];
 
 //----------------------------------------------------------
 //METHODS
@@ -104,19 +117,47 @@ bool settingSteckerPair = false; //A boolean to store whether or not the user is
 void setup() {
   Serial.begin(9600); //Starts the Serial Monitor for testing.
   ledArray.begin(); //Initialise the RGB LEDs.
+  ledArray.clear();
+  ledArray.setBrightness(80);
   for (int i = 0; i < 26; i++) steckerbrettArray[i] = i; //Populates the plugboard array such that there is no substitution originally.
   for (int i = 0; i < 10; i++) steckerColoursUsed[i] = false; //Populates the array to indicate that no plugs are currently steckered.
   for (int i1 = 0; i1 < 26; i1++) for (int i2 = 0; i2 < 3; i2++) rgbLedValues[i1][ i2] = 0; //Initialises the RGB LEDs so that they are all turned off.
   for (int i = 0; i < 26; i++) coloursByStecker[i] = 10; //Populate the coloursByStecker array with ints that are invalid but can still be used for operations if required.
-  introduction(); //Runs the introduction code to introduce the project.
-  for (int i = 0; i < 3; i++) display.showNumberDec(walzenSelected[i] + 1, false, 1, i + 1); //Prints the currently selected rotors on the 7-segment.
-  walzenScreenRefresh(); //Shows the current orientations of the three rotors.
+  for (int i = 0; i < 10; i++) orderColoursUsed[i] = 10;
   refreshLeds(); //Initialise the RGB LEDs.
+  //introduction(); //Runs the introduction code to introduce the project.for (int i = 0; i < 3; i++) display.showNumberDec(walzenSelected[i] + 1, false, 1, i + 1); //Prints the currently selected rotors on the 7-segment.
+  walzenScreenRefresh(); //Shows the current orientations of the three rotors.
 }
 
 //Loop runs each time the code is refreshed.
 void loop() {
+  //char keyInput = keyboard.getKey();
+  char sbInput = keyboard.getKey();
   
+  /*if (keyInput != NO_KEY) {
+    for (int i = 0; i < 26; i++) {
+      if (keyInput == ALPHABET[i]) encryptedLetter = i;
+    }
+    encrypt();
+  }
+
+  Serial
+  
+  */
+
+  
+  if (sbInput != NO_KEY) {
+
+    Serial.println(sbInput);
+    
+    /*int letterPressed;
+    for (int i = 0; i < 26; i++) {
+      if (sbInput == ALPHABET[i]) letterPressed = i;
+    }
+    Serial.println("fuck");
+    
+    changeLeds(letterPressed);*/
+  }
 }
 
 //Introduction introduces the project by printing on the LCD Screens/7-segment.
@@ -290,51 +331,182 @@ void resetOutput() {
 
 //RefreshLeds resends a signal to the array of RGB LEDs so that they are displaying the most recently decided colours.
 void refreshLeds() {
+  Serial.println("yes");
   ledArray.clear();
-  ledArray.setBrightness(10);
+  ledArray.setBrightness(80);
   for (int i = 0; i < 26; i++) ledArray.setPixelColor(i, ledArray.Color(rgbLedValues[i][0], rgbLedValues[i][1], rgbLedValues[i][2]));
+  ledArray.show();
 }
 
 //ChangeLeds() changes the R, G and B values of one of the 26 LEDS.
 //LedChanging indicates the position in the RGB LED array of the LED that is changing colour.
-/*void changeLeds(int ledChanging) {
-  int colourOrder; //An integer to represent the colour that will illuminate the LEDs.
-  bool availableStecker = false;
-  for (int i = 9; i >= 0; i--) if (!steckerColoursUsed[i]) { //Finds the most preferred colour that is currently available to be used as a stecker.
-      colourOrder = i;
-      availableStecker = true;
+void changeLeds(int ledChanging) {
+
+  Serial.println("heck");
+  
+  /*int ledChangePos; //The position of the LED that is being changed in the set of addressable LEDs
+  int colourToUse; //The colour to be used
+  int coloursOccupied = 0;
+  bool allColoursUsed = true; //Checks if there are more colours available
+
+  for (int i = 0; i < 26; i++) { //Checks what position in the LED set the changing LED is from the letter that was pressed.
+    if (ledOrder[i] == ledChanging) ledChangePos = i;
   }
-  if (availableStecker && steckerbrettArray[ledChanging] == ledChanging) { //What the code should do if more steckered pairs are able to be created, and the plug selected can be involved in a new steckered pair.
-    for (int i = 0; i < 3; i++) rgbLedValues[ledChanging][i] = RGB_CODES[colourOrder][i]; //Changes the colour of the selected LED to the selected colour.
-    if (!settingSteckerPair) steckerPair = ledChanging; //If no plug has been selected to pair teh new plug with, log the identity of the newly selected plug.
-    else { //If the plug has a pair to stecker with, establish the stecker between the two plugs.
-      steckerbrettArray[ledChanging] = steckerPair;
-      steckerbrettArray[steckerPair] = ledChanging;
-      steckerColoursUsed[colourOrder] = true;
-      coloursByStecker[ledChanging] = colourOrder;
-      coloursByStecker[steckerPair] = colourOrder;
+  
+  for (int i = 0; i < 10; i++){ //Checks if there are any colours left to use and, if so, which colour should be used.
+    if (!steckerColoursUsed[i]){
+      if (allColoursUsed) colourToUse = i;
+      allColoursUsed = false;
     }
-    settingSteckerPair = !settingSteckerPair;
   }
-  if (steckerbrettArray[ledChanging] != ledChanging) { //What the code should do if the plug selected is already steckered.
-    steckerReset(); //Stops trying to establish a stecker with an already defined plug.
-    int pairedPosition = steckerbrettArray[ledChanging]; //Find the plug that the plug is steckered with.
-    for (int i = 0; i < 3; i++) rgbLedValues[pairedPosition][i] = 0; //Turn off the LEDs indicating steckers for the two relevant plugs.
-    for (int i = 0; i < 3; i++) rgbLedValues[ledChanging][i] = 0;
-    steckerbrettArray[ledChanging] = ledChanging; //Unsteckers the plugs.
-    steckerbrettArray[pairedPosition] = pairedPosition;
-    steckerColoursUsed[coloursByStecker[ledChanging]] = false; //Frees up the colour representing the stecker link to be used in new steckers.
-    coloursByStecker[ledChanging] = 10;
-    coloursByStecker[pairedPosition] = 10;
+
+  if (!allColoursUsed) {
+    for (int i = 0; i < 10; i++) {
+      if (steckerColoursUsed[i]) coloursOccupied++;
+    }
   }
-  refreshLeds(); //Refresh the LEDs.
-  resetOutput(); //Changing the settings resets the output.
-}*/ //DELETE ALL OF THIS IT IS ALL BAD
+
+  for (int i = 0; i < 3; i++) {
+    rgbLedValues[ledChangePos][i] = RGB_CODES[colourToUse][i];
+  }
+  
+
+  /*if (rgbLedValues[ledChangePos, 0] == 0 && rgbLedValues[ledChangePos, 1] == 0 && rgbLedValues[ledChangePos, 2] == 0) { //If we have selected a button whose LED has not already been illuminated
+    
+    if (allColoursUsed) { //What to do if all colours are already used
+      for (int i = 0; i < 26; i++) {
+        if (coloursByStecker[i] == 9) coloursByStecker[i] = 10;
+      }
+      colourToUse = orderColoursUsed[0];
+
+      int gettingRidOfA = 26;
+      int gettingRidOfB = 26;
+      
+      for (int i = 0; i < 26; i++) {
+        if (coloursByStecker[i] = colourToUse) {
+          if (gettingRidOfA == 26) gettingRidOfA = i;
+          else gettingRidOfB = i;
+        }
+      }
+
+      int letterLoseA;
+      int letterLoseB;
+
+      for (int i = 0; i < 26; i++) {
+        if (ledOrder[i] == gettingRidOfA) letterLoseA = i;
+        else if (ledOrder[i] == gettingRidOfB) letterLoseB = i;
+      }
+
+      steckerbrettArray[letterLoseA] = letterLoseA;
+      steckerbrettArray[letterLoseB] = letterLoseB;
+
+      for (int i = 0; i < 9; i++) {
+        orderColoursUsed[i] = orderColoursUsed[i + 1];
+      }
+      orderColoursUsed[9] = colourToUse;
+
+      coloursByStecker[gettingRidOfA] = 10;
+      coloursByStecker[gettingRidOfB] = 10;
+
+      for (int i = 0; i < 3; i++) {
+        rgbLedValues[gettingRidOfA][i] = 0;
+        rgbLedValues[gettingRidOfB][i] = 0;
+      }
+
+
+      //----------------------------------------------------------------------------------------------------------------------------------
+      //check what the oldest set is to make new colour
+
+      //Reset pair with that colour
+      
+    }
+
+    orderColoursUsed[coloursOccupied] = colourToUse;
+    
+    settingSteckerPair = !settingSteckerPair; //Toggle whether or not a new pair is being established
+    
+    for (int i = 0; i < 3; i++) {
+      rgbLedValues[ledChangePos][i] = RGB_CODES[colourToUse][i];
+    }
+
+    coloursByStecker[ledChangePos] = colourToUse;
+    
+    if (!settingSteckerPair) {
+      steckerColoursUsed[colourToUse] = false;
+
+      steckerbrettArray[ledChangePos] = lastLedPressed;
+
+      int lastLetter = ledOrder[lastLedPressed];
+
+      steckerbrettArray[lastLetter] = ledChanging;
+      steckerbrettArray[ledChanging] = lastLetter;
+            
+    }
+  else if (rgbLedValues[ledChangePos, 0] > 0 || rgbLedValues[ledChangePos, 1] > 0 || rgbLedValues[ledChangePos, 2] > 0) { //If the LED selected is already illuminated
+
+    if (settingSteckerPair) { //What to do if a single plug is already steckered without a pair
+
+      settingSteckerPair = false;
+
+      for (int i = 0; i < 3; i++) rgbLedValues[lastLedPressed][i] = 0;
+      
+    }
+
+    int correspondingLetter = steckerbrettArray[ledChanging];
+
+    int correspondingLetterAddressable;
+
+    for (int i = 0; i < 26; i++) {
+      if (ledOrder[i] == correspondingLetter) correspondingLetterAddressable = i;
+    }
+
+    steckerbrettArray[correspondingLetter] = correspondingLetter;
+    steckerbrettArray[ledChanging] = ledChanging;
+
+    int colourOpening = coloursByStecker[ledChangePos];
+    steckerColoursUsed[colourOpening] = false;
+
+    for (int i = 0; i < 10; i++) {
+      int howOld;
+      
+      if (orderColoursUsed[i] = colourOpening) {
+        for (int j = howOld; j < 9; j++) {
+          orderColoursUsed[j] = orderColoursUsed[j + 1];
+        }
+        orderColoursUsed[9] = 10;
+      }
+    }
+    
+    coloursByStecker[ledChangePos] = 10;
+    coloursByStecker[correspondingLetterAddressable] = 10;
+
+    for (int i = 0; i < 3; i++) {
+      rgbLedValues[ledChangePos][i] = 0;
+      rgbLedValues[correspondingLetterAddressable][i] = 0;
+    }
+    
+  }
+    
+    lastLedPressed = ledChangePos;
+  }
+
+
+  refreshLeds(); //Refreshes the colours of the LEDs*/
+
+
+
+
+  rgbLedValues[0][0] = 255;
+  rgbLedValues[0][1] = 255;
+  rgbLedValues[0][1] = 255;
+
+  
+}
 
 //SteckerReset finds any plugs that are halfway through establishing a new steckered pair and unselects them.
 void steckerReset() {
   if (settingSteckerPair) {
-      for (int i = 0; i < 3; i++) rgbLedValues[steckerPair][i] = 0;
+      for (int i = 0; i < 3; i++) rgbLedValues[lastLedPressed][i] = 0;
       settingSteckerPair = false;
     }
 }

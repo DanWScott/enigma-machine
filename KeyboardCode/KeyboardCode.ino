@@ -19,6 +19,7 @@ void setup() {
 }
 
 void loop() {
+  
   char key = keyboard.getKey();
   if (key != NO_KEY) {
     Serial.println(key);
