@@ -117,10 +117,9 @@ int positionUnoccupied = -1; //Ensures the message population code works.
 
 bool settingSteckerPair = false;
 int lastLedPressed;
+int lastLetterPressed;
 int orderColoursUsed[10];
 
-
-int testInt = 0;
 
 //----------------------------------------------------------
 //METHODS
@@ -343,7 +342,6 @@ void refreshLeds() {
 void changeLeds(int ledChanging) {
 
   int ledPos;
-
   int colourToUse;
   int coloursOccupied;
   bool allColoursUsed = true;
@@ -366,9 +364,13 @@ void changeLeds(int ledChanging) {
   if (rgbLedValues[ledPos][0] == 0 && rgbLedValues[ledPos][1] == 0 && rgbLedValues[ledPos][2] == 0) {
 
     for (int i = 0; i < 3; i++) rgbLedValues[ledPos][i] = RGB_CODES[colourToUse][i];
+
+    coloursByStecker[ledPos] = colourToUse;
     
     if (settingSteckerPair) {
       steckerColoursUsed[colourToUse] = true;
+      steckerbrettArray[ledChanging] = lastLetterPressed;
+      steckerbrettArray[lastLetterPressed] = ledChanging;
     }
     else {
       
@@ -376,11 +378,34 @@ void changeLeds(int ledChanging) {
     settingSteckerPair = !settingSteckerPair;
   }
   else {
+    int colourRemove;
+    int correspondingLed;
+    int correspondingLetter;
+
+    colourRemove = coloursByStecker[ledPos];
+    steckerColoursUsed[colourRemove] = false;
+
+    correspondingLetter = steckerbrettArray[ledChanging];
+    correspondingLed = LED_ORDER[correspondingLetter];
+    
     for (int i = 0; i < 3; i++) rgbLedValues[ledPos][i] = 0;
+    for (int i = 0; i < 3; i++) rgbLedValues[correspondingLed][i] = 0;
+
+    steckerbrettArray[ledChanging] = ledChanging;
+    steckerbrettArray[correspondingLetter] = correspondingLetter;
+
+
+
+    if (settingSteckerPair) for (int i = 0; i < 3; i++) rgbLedValues[lastLedPressed][i] = 0;
+
+    settingSteckerPair = false;
+
+    
   }
 
   
-
+  lastLetterPressed = ledChanging;
+  lastLedPressed = ledPos;
 
   refreshLeds();
 
@@ -394,6 +419,7 @@ void steckerReset() {
   if (settingSteckerPair) {
       for (int i = 0; i < 3; i++) rgbLedValues[lastLedPressed][i] = 0;
       settingSteckerPair = false;
+      refreshLeds();
     }
 }
 
