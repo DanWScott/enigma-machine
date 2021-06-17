@@ -378,24 +378,32 @@ void changeLeds(int ledChanging) {
         }
         orderColoursUsed[9] = colourToUse;
       }
-      else {
-        for (int i = 0; i < 26; i++) {
-          if (coloursByStecker[i] == colourToUse) ledOff = i;
-        }
-        for (int i = 0; i < 26; i++) {
-          if (LED_ORDER[i] == ledOff) ledRemoving = i;
-        }
-        correspondingLetter = steckerbrettArray[ledRemoving];
-        correspondingLed = LED_ORDER[correspondingLetter];
-
-        steckerbrettArray[correspondingLetter] = correspondingLetter;
-        steckerbrettArray[ledRemoving] = ledRemoving;
-
-        for (int i = 0; i < 3; i++) {
-          rgbLedValues[ledOff][i] = 0;
-          rgbLedValues[correspondingLed][i] = 0;
-        }
+      
+      
+      
+      
+      for (int i = 0; i < 26; i++) {
+        if (coloursByStecker[i] == colourToUse) ledOff = i;
       }
+
+      if (settingSteckerPair) steckerColoursUsed[colourToUse] = false;
+
+      for (int i = 0; i < 26; i++) {
+        if (LED_ORDER[i] == ledOff) ledRemoving = i;
+      }
+      correspondingLetter = steckerbrettArray[ledRemoving];
+      correspondingLed = LED_ORDER[correspondingLetter];
+
+      steckerbrettArray[correspondingLetter] = correspondingLetter;
+      steckerbrettArray[ledRemoving] = ledRemoving;
+
+      for (int i = 0; i < 3; i++) {
+        rgbLedValues[ledOff][i] = 0;
+        rgbLedValues[correspondingLed][i] = 0;
+      }
+
+      
+      
     }
 
     
