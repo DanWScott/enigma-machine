@@ -39,12 +39,8 @@ byte kbRowPins[ROWS] = {48, 49};
 byte sbColPins[COLS] = {50, 51, 52, 53, 44, 45, 46, 47, 42, 39, 41, 40, 43};
 byte sbRowPins[ROWS] = {48, 49};
 
-//Keypad keyboard = Keypad(makeKeymap(KEYS), kbRowPins, kbColPins, ROWS, COLS);
+Keypad keyboard = Keypad(makeKeymap(KEYS), kbRowPins, kbColPins, ROWS, COLS);
 Keypad steckerbrettKb = Keypad(makeKeymap(KEYS), sbRowPins, sbColPins, ROWS, COLS);
-
-
-
-
 
 //Define Connection Pins
 #define CLK 23 //Define the 7-segment's Clock pin
@@ -78,13 +74,7 @@ const char ALPHABET[26] = "abcdefghijklmnopqrstuvwxyz"; //An array to establish 
 
 //RGB LED Setup
 const int RGB_LED_COUNT = 26; //There are 26 RGB LEDs in the LED array.
-
-
-
 const int LED_ORDER[26] = {16, 5, 3, 14, 19, 13, 12, 11, 24, 10, 9, 8, 7, 6, 25, 0, 17, 20, 15, 21, 23, 4, 18, 2, 1, 22};
-
-
-
 Adafruit_NeoPixel ledArray(RGB_LED_COUNT, RGB_LED_DIO, NEO_GRB + NEO_KHZ400); //Establishes an array of 26 RGB LEDs.
 bool steckerColoursUsed[10]; //An array to store which colours have and have not been used to indicate steckered pairs.
 int coloursByStecker[26]; //An array that stores which colour each plug's LED is, so that when they are unsteckered the colour may be identified and reused.
@@ -347,6 +337,8 @@ void changeLeds(int ledChanging) {
   bool allColoursUsed = true;
   int lastLetter;
 
+  bool openingFound = false;
+
 
   Serial.println(ledChanging);
   
@@ -357,12 +349,56 @@ void changeLeds(int ledChanging) {
   for (int i = 0; i < 10; i++) {
     if (!steckerColoursUsed[i]) {
       if (allColoursUsed) colourToUse = i;
+
+      for (int j = 0; j < 10; j++) {
+        if (orderColoursUsed[j] == 10 && !openingFound) {
+          orderColoursUsed[j] = colourToUse;
+          openingFound = true;
+        }
+      }
+      
       allColoursUsed = false;
     }
   }
 
   if (rgbLedValues[ledPos][0] == 0 && rgbLedValues[ledPos][1] == 0 && rgbLedValues[ledPos][2] == 0) {
+    
+    if (allColoursUsed) {
 
+      int ledRemoving;
+      int ledOff;
+      int correspondingLed;
+      int correspondingLetter;
+    
+      colourToUse = orderColoursUsed[0];
+      
+      if (settingSteckerPair) {
+        for (int i = 0; i < 9; i++) {
+          orderColoursUsed[i] = orderColoursUsed[i + 1];
+        }
+        orderColoursUsed[9] = colourToUse;
+      }
+      else {
+        for (int i = 0; i < 26; i++) {
+          if (coloursByStecker[i] == colourToUse) ledOff = i;
+        }
+        for (int i = 0; i < 26; i++) {
+          if (LED_ORDER[i] == ledOff) ledRemoving = i;
+        }
+        correspondingLetter = steckerbrettArray[ledRemoving];
+        correspondingLed = LED_ORDER[correspondingLetter];
+
+        steckerbrettArray[correspondingLetter] = correspondingLetter;
+        steckerbrettArray[ledRemoving] = ledRemoving;
+
+        for (int i = 0; i < 3; i++) {
+          rgbLedValues[ledOff][i] = 0;
+          rgbLedValues[correspondingLed][i] = 0;
+        }
+      }
+    }
+
+    
     for (int i = 0; i < 3; i++) rgbLedValues[ledPos][i] = RGB_CODES[colourToUse][i];
 
     coloursByStecker[ledPos] = colourToUse;
@@ -382,8 +418,21 @@ void changeLeds(int ledChanging) {
     int correspondingLed;
     int correspondingLetter;
 
+    int howOld;
+
     colourRemove = coloursByStecker[ledPos];
     steckerColoursUsed[colourRemove] = false;
+
+    for (int i = 0; i < 10; i++) {
+      if (orderColoursUsed[i] == colourRemove) {
+        howOld = i;
+      }
+    }
+
+    for (int i = howOld; i < 9; i++) {
+      orderColoursUsed[i] = orderColoursUsed[i + 1];
+    }
+    orderColoursUsed[9] = colourRemove;
 
     correspondingLetter = steckerbrettArray[ledChanging];
     correspondingLed = LED_ORDER[correspondingLetter];
