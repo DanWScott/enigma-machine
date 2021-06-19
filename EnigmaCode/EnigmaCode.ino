@@ -35,6 +35,20 @@ byte sbRowPins[ROWS] = {48, 49}; //Defines the pins of the steckerbrett matrix.
 Keypad keyboard = Keypad(makeKeymap(KEYS), kbRowPins, kbColPins, ROWS, COLS); //Sets up the keyboard matrix.
 Keypad steckerbrettKb = Keypad(makeKeymap(KEYS), sbRowPins, sbColPins, ROWS, COLS); //Sets up the steckerbrett matrix.
 
+//Setup Setting Buttons
+const byte DIMENSION = 3;
+
+char SETTING_BUTTONS[DIMENSION][DIMENSION] = {
+  {0, 1, 2},
+  {3, 4, 5},
+  {6, 7, 8}
+}; //Creates a number which correllates to each of my nine buttons used to change settings.
+
+byte settingColPins[DIMENSION] = {11, 12, 13};
+byte settingRowPins[DIMENSION] = {14, 15, 16}; //Defines the pins of the setting button matrix.
+
+Keypad settingButtons = Keypad(makeKeymap(SETTING_BUTTONS), settingRowPins, settingColPins, DIMENSION, DIMENSION); //Sets up the matrix which runs the setting buttons.
+
 //Define Connection Pins
 #define CLK 23 //Define the 7-segment's Clock pin
 #define DIO 22 //Define the 7-segment's Digital Input/Output pin
@@ -107,17 +121,18 @@ int lastLetterPressed; //An integer to store which letter was the last one to be
 
 //Setup runs once when the code is started.
 void setup() {
-  Serial.begin(9600); //Starts the Serial Monitor for testing.
+  for (int i = 0; i < 26; i++) steckerbrettArray[i] = i; //Populates the plugboard array such that there is no substitution originally.
+  for (int i = 0; i < 10; i++) steckerColoursUsed[i] = false; //Populates the array to indicate that no plugs are currently steckered.
+  for (int i1 = 0; i1 < 26; i1++) for (int i2 = 0; i2 < 3; i2++) rgbLedValues[i1][i2] = 0; //Initialises the RGB LEDs so that they are all turned off.
+  for (int i = 0; i < 26; i++) coloursByStecker[i] = 10; //Populate the coloursByStecker array with ints that are invalid but can still be used for operations if required.
+
   ledArray.begin(); //Initialise the RGB LEDs.
   ledArray.clear();
   ledArray.setBrightness(80);
-  for (int i = 0; i < 26; i++) steckerbrettArray[i] = i; //Populates the plugboard array such that there is no substitution originally.
-  for (int i = 0; i < 10; i++) steckerColoursUsed[i] = false; //Populates the array to indicate that no plugs are currently steckered.
-  for (int i1 = 0; i1 < 26; i1++) for (int i2 = 0; i2 < 3; i2++) rgbLedValues[i1][ i2] = 0; //Initialises the RGB LEDs so that they are all turned off.
-  for (int i = 0; i < 26; i++) coloursByStecker[i] = 10; //Populate the coloursByStecker array with ints that are invalid but can still be used for operations if required.
-  
   refreshLeds(); //Initialise the RGB LEDs.
+  
   introduction(); //Runs the introduction code to introduce the project.
+  
   for (int i = 0; i < 3; i++) display.showNumberDec(walzenSelected[i] + 1, false, 1, i + 1); //Prints the currently selected rotors on the 7-segment.
   walzenScreenRefresh(); //Shows the current orientations of the three rotors.
 }
@@ -126,13 +141,13 @@ void setup() {
 void loop() {
   char key = keyboard.getKey(); //The below variables are used to check if any buttons on any of the keypad matrices are being pressed at any given time.
   char sbInput = steckerbrettKb.getKey();
+  char settingChange = settingButtons.getKey();
 
   if (key != NO_KEY) { //Runs the encryption algorithm on a new letter if a key on the keyboard is pressed.
     for (int i = 0; i < 26; i++) {
       if (key == ALPHABET[i]) encryptedLetter = i;
     }
     
-    Serial.println(key);
     encrypt(); //Encrypts the new input.
   }
 
@@ -144,6 +159,28 @@ void loop() {
     }
     
     changeLeds(letterPressed); //Changes the steckerbrett.
+  }
+
+  if (settingChange != NO_KEY) { //Checks to see if one of the settings is being changed.
+    if (settingChange <= 2) { //Substitutes a rotor if one of the buttons on the rotor substitution panel is selected.
+      augmentRotors(settingChange);
+    }
+    
+    else { //Rotates a rotor if a button on the rotor rotation panel was selected.
+      int rotorToTurn; //rotorToTurn will store which rotor the user has indicated they wish to turn.
+      int orientation; //Orientation will store whether the user wishes to rotate the rotor forwards or backwards.
+
+      if (settingChange <= 5) { //Rotates the rotors backward if the bottom row of buttons is pressed.
+        rotorToTurn = settingChange - 3;
+        orientation = false;
+      }
+      else { //Rotates the rotors forward if the top row of buttons is pressed.
+        rotorToTurn = settingChange - 6;
+        orientation = true;
+      }
+
+      rotorSettings(rotorToTurn, orientation);
+    }
   }
 }
 
@@ -423,6 +460,7 @@ void changeLeds(int ledChanging) {
   lastLetterPressed = ledChanging; //Keeps track of the last button pressed and its corresponding letter.
   lastLedPressed = ledPos;
 
+  resetOutput(); //Changing the steckerbrett settings resets the output.
   refreshLeds(); //Refreshes the LEDs being displayed.
 }
 
